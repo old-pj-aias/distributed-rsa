@@ -15,7 +15,12 @@ use rand::rngs::OsRng;
 // use num_bigint_dig::traits::ModInverse;
 
 pub struct PlainShare {
-    pub s: BigUint
+    pub s: BigUint,
+    pub n: BigUint
+}
+
+pub struct PlainShareSet {
+    pub plain_shares: Vec<PlainShare>
 }
 
 pub struct DistributedRSAPrivateKey {
@@ -27,10 +32,23 @@ pub struct DistributedRSAPrivateKeySet {
     pub private_keys: Vec<DistributedRSAPrivateKey>
 }
 
+impl PlainShareSet {
+    pub fn decrypt(&self) -> BigUint {
+        let mut m = BigUint::from(1 as u32);
+
+        for share in &self.plain_shares {
+            m *= &share.s;
+            m %= &share.n;
+        }
+    
+        return m;
+    }
+}
+
 impl DistributedRSAPrivateKey {
     pub fn generate_share(&self, c: BigUint) -> PlainShare {
         let s = c.modpow(&self.d, &self.n);
-        return PlainShare { s: s }
+        return PlainShare { s: s, n: self.n.clone() }
     }
 }
 
@@ -113,8 +131,14 @@ fn test_decrypt() {
 
     let keys = DistributedRSAPrivateKeySet::from_rsa_private_key(&priv_key, &pub_key, 10);
 
+    let mut shares = Vec::new();
     for key in keys.private_keys {
         let share = key.generate_share(c.clone());
-        println!("{}", share.s);
+        shares.push(share);
     }
+
+    let share_set = PlainShareSet { plain_shares: shares };
+
+    let plain = share_set.decrypt();
+    assert_eq!(plain, m);
 }
