@@ -1,6 +1,6 @@
 mod utils;
 
-use crate::utils::generate_random_ubigint;
+use crate::utils::{generate_random_ubigint, submod};
 
 extern crate rsa;
 extern crate rand;
@@ -53,7 +53,11 @@ impl DistributedRSAPrivateKey {
 }
 
 impl DistributedRSAPrivateKeySet {
-    pub fn from_rsa_private_key (private_key: &RSAPrivateKey, public_key: &RSAPublicKey, partitions: u32) -> Self {
+    pub fn from_rsa_private_key (
+            private_key: &RSAPrivateKey,
+            public_key: &RSAPublicKey,
+            partitions: u32,
+            random_size: usize) -> Result<Self, String> {
         let mut private_keys = Vec::new();
 
         let n = public_key.n();
@@ -67,7 +71,7 @@ impl DistributedRSAPrivateKeySet {
         let mut remain = d.clone();
 
         for _ in 0..partitions -1 {
-            let random = generate_random_ubigint(512) % lambda.clone();
+            let random = generate_random_ubigint(random_size) % lambda.clone();
             let key = DistributedRSAPrivateKey{ 
                 d: random.clone() % lambda.clone(),
                 n: n.clone()
@@ -75,7 +79,10 @@ impl DistributedRSAPrivateKeySet {
             
             private_keys.push(key);
 
-            remain = remain - random;
+            remain = match submod(remain, random, n.clone()) {
+                Ok(result) => result,
+                Err(_) => { return Err("partitions and random_size too large".to_string()) }
+            };
         }
 
         let key = DistributedRSAPrivateKey{ 
@@ -85,9 +92,9 @@ impl DistributedRSAPrivateKeySet {
 
         private_keys.push(key);
 
-        return DistributedRSAPrivateKeySet {
+        Ok(DistributedRSAPrivateKeySet {
             private_keys: private_keys
-        }
+        })
     }
 }
 
@@ -105,7 +112,7 @@ fn test_generate_private_key_set() {
     let one = BigUint::from(1 as u16);
     let lambda = (&primes[0].clone() - &one) * (&primes[1] - &one);
 
-    let keys = DistributedRSAPrivateKeySet::from_rsa_private_key(&priv_key, &pub_key, 10);
+    let keys = DistributedRSAPrivateKeySet::from_rsa_private_key(&priv_key, &pub_key, 10, 1024).unwrap();
 
     let mut sum = BigUint::from(0 as u16);
     for key in keys.private_keys {
@@ -129,7 +136,7 @@ fn test_decrypt() {
 
     let c = m.modpow(e, n);
 
-    let keys = DistributedRSAPrivateKeySet::from_rsa_private_key(&priv_key, &pub_key, 10);
+    let keys = DistributedRSAPrivateKeySet::from_rsa_private_key(&priv_key, &pub_key, 30, 1024).unwrap();
 
     let mut shares = Vec::new();
     for key in keys.private_keys {

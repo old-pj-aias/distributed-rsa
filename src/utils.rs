@@ -7,15 +7,16 @@ pub fn generate_random_ubigint(size: usize) -> BigUint {
     return BigUint::new(random_bytes);
 }
 
-pub fn submod(a: BigUint, b: BigUint, n: BigUint) -> BigUint {
+pub fn submod(a: BigUint, b: BigUint, n: BigUint) -> Result<BigUint, String> {
     let a  = a % n.clone();
     let b  = b % n.clone();
 
     if a > b {
-        a - b
+        Ok(a - b)
     }
     else {
-        n - (b - a)
+        println!("minus !");
+        Err("minus".to_string())
     }
 
 }
@@ -29,30 +30,16 @@ fn test_generate_random_ubigint() {
     }
 }
 
-#[test]
-fn test_submod1() {
-    let n = BigUint::from(10 as u16);
-
-    let a = BigUint::from(5 as u16);
-    let b = BigUint::from(8 as u16);
-
-    let expected = BigUint::from(7 as u16);
-    let result = submod(a, b, n);
-
-    println!("{},{}", result, expected);
-
-    assert_eq!(result, expected);
-}
 
 #[test]
-fn test_submod2() {
+fn test_submod() {
     let n = BigUint::from(10 as u16);
 
     let a = BigUint::from(5 as u16);
     let b = BigUint::from(8 as u16);
 
     let expected = BigUint::from(3 as u16);
-    let result = submod(b, a, n);
+    let result = submod(b, a, n).unwrap();
 
     println!("{},{}", result, expected);
 
