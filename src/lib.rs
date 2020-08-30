@@ -12,22 +12,28 @@ use std::vec::Vec;
 
 use rsa::{BigUint, RSAPublicKey, RSAPrivateKey, PublicKeyParts};
 use rand::rngs::OsRng;
-// use num_bigint_dig::traits::ModInverse;
 
+use serde::{Serialize, Deserialize};
+
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PlainShare {
     pub s: BigUint,
     pub n: BigUint
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PlainShareSet {
     pub plain_shares: Vec<PlainShare>
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct DistributedRSAPrivateKey {
     pub d: BigUint,
     pub n: BigUint
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct DistributedRSAPrivateKeySet {
     pub private_keys: Vec<DistributedRSAPrivateKey>
 }
@@ -130,7 +136,7 @@ fn test_decrypt() {
     let priv_key = RSAPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
     let pub_key = RSAPublicKey::from(&priv_key);
 
-    let m = BigUint::from_bytes_le(b"hello");
+    let m = BigUint::from_bytes_le(b"!!");
     let n = pub_key.n();
     let e = pub_key.e();
 
@@ -147,5 +153,7 @@ fn test_decrypt() {
     let share_set = PlainShareSet { plain_shares: shares };
 
     let plain = share_set.decrypt();
+    println!("{}", plain);
+
     assert_eq!(plain, m);
 }
